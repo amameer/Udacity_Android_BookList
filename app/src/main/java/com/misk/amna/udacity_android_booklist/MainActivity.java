@@ -1,6 +1,9 @@
 package com.misk.amna.udacity_android_booklist;
 
+import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -12,6 +15,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -38,36 +42,52 @@ https://github.com/udacity/ud843_Soonami
 ////////////////////////////
 
 
-
 public class MainActivity extends AppCompatActivity {
 
     private static String REQUEST_URL = "";
-    public myAsyncTask task;
+    public BookAsyncTask task;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
+
         Button SearchBtn = (Button) findViewById(R.id.searchBtn);
+
 
         SearchBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
+                //from https://developer.android.com/training/monitoring-device-state/connectivity-monitoring.html#DetermineType
+                ConnectivityManager cm =
+                        (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+
+                NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+                boolean isConnected = activeNetwork != null &&
+                        activeNetwork.isConnectedOrConnecting();
+
+                if (!isConnected){
+                    Toast.makeText(getApplicationContext(),"No Enternet!!",Toast.LENGTH_LONG).show();
+
+                    return;
+                }
+
                 EditText SearchView = (EditText) findViewById(R.id.searchView);
                 String KeyWord = SearchView.getText().toString().replaceAll(" ", "");
 
                 REQUEST_URL = "https://www.googleapis.com/books/v1/volumes?q=" + KeyWord.trim() + "&maxResults=40";
-                task = new myAsyncTask();
-                task.execute();
+               new BookAsyncTask().execute();
+
 
             }
         });
     }
 
 
-    private class myAsyncTask extends AsyncTask<URL, Void, ArrayList<Book>> {
+    private class BookAsyncTask extends AsyncTask<URL, Void, ArrayList<Book>> {
 
         @Override
         protected ArrayList<Book> doInBackground(URL... urls) {
@@ -120,8 +140,9 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
 
-            }
-            else {
+            } else {
+
+                EmptyTextView.setText("No Result Please enter another keyword");
                 //clear if no result
                 bookListView.setAdapter(null);
             }
@@ -166,7 +187,8 @@ public class MainActivity extends AppCompatActivity {
                     Log.e("Error::", "Error response code: " + urlConnection.getResponseCode());
                 }
             } catch (IOException e) {
-                Log.e("retrieving::", "Problem retrieving the earthquake JSON results.", e);
+                Log.e("retrieving::", "Problem retrieving the JSON results.", e);
+
             } finally {
                 if (urlConnection != null) {
                     urlConnection.disconnect();
